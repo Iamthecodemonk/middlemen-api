@@ -1,0 +1,21 @@
+# Dependency folders
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+npm-debug.log*
+
+# Build and coverage outputs
+coverage/
+dist/
+
+# OS-specific files
+.DS_Store
+
+# Documentation and Markdown files
+docs/
+*.md
+
+

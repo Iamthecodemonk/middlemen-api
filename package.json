@@ -1,0 +1,40 @@
+{
+  "name": "middlemen-rental-platform",
+  "version": "0.1.0",
+  "description": "Clean architecture bootstrap for a no-agent rental platform.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "migrate": "node src/infrastructure/db/runMigrations.js",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down",
+    "dev:docker": "docker compose up --build",
+    "migrate:reset": "docker compose down -v"
+  },
+  "keywords": [
+    "clean-architecture",
+    "nodejs",
+    "postgresql",
+    "redis",
+    "rental-platform"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/swagger": "^9.5.2",
+    "@fastify/swagger-ui": "^5.2.5",
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "pg": "^8.20.0",
+    "redis": "^4.7.0",
+    "uuid": "^14.0.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
