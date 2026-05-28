@@ -53,7 +53,7 @@ function registerRoutes(app) {
     {
       preHandler: [
         authenticate,
-        authorizeRoles("owner", "admin"),
+        authorizeRoles("property_owner", "agent", "owner", "admin"),
         validate(createPropertySchema)
       ],
       schema: {
@@ -91,7 +91,7 @@ function registerRoutes(app) {
     {
       preHandler: [
         authenticate,
-        authorizeRoles("tenant", "admin"),
+        authorizeRoles("user", "tenant", "admin"),
         validate(claimPropertySchema)
       ],
       schema: {

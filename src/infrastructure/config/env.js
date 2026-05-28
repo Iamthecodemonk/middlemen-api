@@ -17,7 +17,8 @@ const env = {
   otpTtlSeconds: Number(process.env.OTP_TTL_SECONDS || 300),
   otpResendCooldownSeconds: Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60),
   loginRateLimitMax: Number(process.env.LOGIN_RATE_LIMIT_MAX || 5),
-  loginRateLimitWindowSeconds: Number(process.env.LOGIN_RATE_LIMIT_WINDOW_SECONDS || 900)
+  loginRateLimitWindowSeconds: Number(process.env.LOGIN_RATE_LIMIT_WINDOW_SECONDS || 900),
+  googleClientId: process.env.GOOGLE_CLIENT_ID || ""
 };
 
 module.exports = { env };

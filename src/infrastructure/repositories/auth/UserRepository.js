@@ -35,6 +35,38 @@ class UserRepository {
     return this.mapWithSensitive(row);
   }
 
+  async createGoogleUser({ fullName, email, phone, role, googleId, avatarUrl }) {
+    const [row] = await this.db("users")
+      .insert({
+        full_name: fullName,
+        email,
+        phone,
+        role,
+        google_id: googleId,
+        avatar_url: avatarUrl,
+        last_auth_provider: "google",
+        mfa_channel: "email",
+        is_verified: true
+      })
+      .returning("*");
+
+    return this.mapWithSensitive(row);
+  }
+
+  async findByEmail(email) {
+    if (!email) {
+      return null;
+    }
+
+    const row = await this.db("users").where({ email }).first();
+    return row ? this.mapWithSensitive(row) : null;
+  }
+
+  async findByGoogleId(googleId) {
+    const row = await this.db("users").where({ google_id: googleId }).first();
+    return row ? this.mapWithSensitive(row) : null;
+  }
+
   async findByIdentifier(identifier) {
     const row = await this.db("users")
       .where({ email: identifier })
@@ -75,6 +107,21 @@ class UserRepository {
     });
   }
 
+  async linkGoogleAccount(userId, { googleId, avatarUrl }) {
+    const [row] = await this.db("users")
+      .where({ id: userId })
+      .update({
+        google_id: googleId,
+        avatar_url: avatarUrl,
+        last_auth_provider: "google",
+        is_verified: true,
+        updated_at: this.db.fn.now()
+      })
+      .returning("*");
+
+    return this.mapWithSensitive(row);
+  }
+
   mapWithSensitive(row) {
     const user = new UserAccount({
       id: row.id,
@@ -85,6 +132,8 @@ class UserRepository {
       userTier: row.user_tier,
       isVerified: row.is_verified,
       mfaChannel: row.mfa_channel,
+      googleId: row.google_id,
+      avatarUrl: row.avatar_url,
       isActive: row.is_active,
       trustScore: row.trust_score,
       createdAt: row.created_at

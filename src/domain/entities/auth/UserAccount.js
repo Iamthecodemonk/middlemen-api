@@ -8,6 +8,8 @@ class UserAccount {
     userTier,
     isVerified,
     mfaChannel,
+    googleId,
+    avatarUrl,
     isActive,
     trustScore,
     createdAt
@@ -20,6 +22,8 @@ class UserAccount {
     this.userTier = userTier;
     this.isVerified = isVerified;
     this.mfaChannel = mfaChannel;
+    this.googleId = googleId;
+    this.avatarUrl = avatarUrl;
     this.isActive = isActive;
     this.trustScore = trustScore;
     this.createdAt = createdAt;

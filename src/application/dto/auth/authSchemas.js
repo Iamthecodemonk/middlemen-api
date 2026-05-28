@@ -1,5 +1,21 @@
 const { z } = require("zod");
 
+const accountRoleSchema = z.preprocess((value) => {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, "_");
+  if (normalized === "tenant") {
+    return "user";
+  }
+  if (normalized === "owner") {
+    return "property_owner";
+  }
+
+  return normalized;
+}, z.enum(["user", "property_owner", "agent"]));
+
 const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters")
@@ -16,7 +32,7 @@ const registerSchema = z.object({
   fullName: z.string().min(2),
   email: z.string().email().optional(),
   phone: z.string().min(7),
-  role: z.enum(["tenant", "owner"]),
+  role: accountRoleSchema.default("user"),
   password: passwordSchema,
   mfaChannel: z.enum(["email", "sms"])
 }).superRefine((value, ctx) => {
@@ -43,6 +59,12 @@ const loginSchema = z.object({
   password: z.string().min(1)
 });
 
+const googleAuthSchema = z.object({
+  idToken: z.string().min(20),
+  role: accountRoleSchema.default("user"),
+  phone: z.string().min(7).optional()
+});
+
 const forgotPasswordSchema = z.object({
   identifier: z.string().min(3)
 });
@@ -59,6 +81,7 @@ const refreshTokenSchema = z.object({
 module.exports = {
   checkAvailabilitySchema,
   registerSchema,
+  googleAuthSchema,
   verifyOtpSchema,
   resendOtpSchema,
   loginSchema,

@@ -49,7 +49,7 @@ class RefreshSessionUseCase {
 }
 
 function sanitizeUser(user) {
-  const { passwordHash, ...safeUser } = user;
+  const { passwordHash, googleId, ...safeUser } = user;
   return safeUser;
 }
 

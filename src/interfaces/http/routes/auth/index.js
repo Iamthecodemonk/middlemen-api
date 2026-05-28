@@ -2,6 +2,7 @@ const { AuthController } = require("../../controllers/auth/AuthController");
 const { validate } = require("../../middleware/validate");
 const {
   checkAvailabilitySchema,
+  googleAuthSchema,
   registerSchema,
   verifyOtpSchema,
   resendOtpSchema,
@@ -16,6 +17,7 @@ const {
   checkAvailabilityResponseSchema,
   errorResponseSchema,
   forgotPasswordBodySchema,
+  googleAuthBodySchema,
   loginBodySchema,
   messageResponseSchema,
   refreshTokenBodySchema,
@@ -115,6 +117,26 @@ async function buildAuthRouter(app) {
       }
     },
     AuthController.login
+  );
+
+  app.post(
+    "/google",
+    {
+      preHandler: validate(googleAuthSchema),
+      schema: {
+        tags: ["Auth"],
+        summary: "Login or register with Google",
+        body: googleAuthBodySchema,
+        response: {
+          200: authSessionResponseSchema,
+          401: errorResponseSchema,
+          409: errorResponseSchema,
+          422: errorResponseSchema,
+          503: errorResponseSchema
+        }
+      }
+    },
+    AuthController.google
   );
 
   app.post(

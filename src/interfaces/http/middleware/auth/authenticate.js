@@ -15,7 +15,7 @@ async function authenticate(request) {
       throw new AppError("User is not authorized", 401);
     }
 
-    const { passwordHash, ...safeUser } = user;
+    const { passwordHash, googleId, ...safeUser } = user;
     request.auth = {
       token,
       user: safeUser

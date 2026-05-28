@@ -20,12 +20,14 @@ const { LoginUserUseCase } = require("../../application/use-cases/auth/LoginUser
 const { RefreshSessionUseCase } = require("../../application/use-cases/auth/RefreshSessionUseCase");
 const { ForgotPasswordUseCase } = require("../../application/use-cases/auth/ForgotPasswordUseCase");
 const { ResetPasswordUseCase } = require("../../application/use-cases/auth/ResetPasswordUseCase");
+const { GoogleAuthUseCase } = require("../../application/use-cases/auth/GoogleAuthUseCase");
 const { NegotiationService } = require("../../domain/services/NegotiationService");
 const { PasswordHasher } = require("../services/auth/PasswordHasher");
 const { JwtService } = require("../services/auth/JwtService");
 const { OtpService } = require("../services/auth/OtpService");
 const { AuthRateLimiter } = require("../services/auth/AuthRateLimiter");
 const { AuthDeliveryService } = require("../services/auth/AuthDeliveryService");
+const { GoogleAuthService } = require("../services/auth/GoogleAuthService");
 const { env } = require("./env");
 
 async function createContainer() {
@@ -59,6 +61,7 @@ async function createContainer() {
     windowSeconds: env.loginRateLimitWindowSeconds
   });
   const authDeliveryService = new AuthDeliveryService();
+  const googleAuthService = new GoogleAuthService({ clientId: env.googleClientId });
 
   return {
     db,
@@ -104,6 +107,12 @@ async function createContainer() {
           jwtService,
           refreshTokenRepository,
           authRateLimiter
+        }),
+        googleAuth: new GoogleAuthUseCase({
+          userRepository,
+          googleAuthService,
+          jwtService,
+          refreshTokenRepository
         }),
         refreshSession: new RefreshSessionUseCase({
           userRepository,

@@ -34,6 +34,14 @@ class AuthController {
     reply.send(payload);
   }
 
+  static async google(request, reply) {
+    const payload = await request.server.container.useCases.auth.googleAuth.execute({
+      ...request.body,
+      ...getRequestMetadata(request)
+    });
+    reply.send(payload);
+  }
+
   static async refresh(request, reply) {
     const payload = await request.server.container.useCases.auth.refreshSession.execute({
       ...request.body,
