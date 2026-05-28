@@ -52,7 +52,9 @@ async function buildAuthRouter(app) {
       preHandler: validate(registerSchema),
       schema: {
         tags: ["Auth"],
-        summary: "Register a user and send OTP",
+        summary: "Register a user and send OTP by email or SMS",
+        description:
+          "Creates a password account and sends the signup OTP using body.mfaChannel. Use mfaChannel=email for SMTP email delivery or mfaChannel=sms for Termii SMS OTP delivery.",
         body: registerBodySchema,
         response: {
           201: registerResponseSchema,
@@ -70,7 +72,9 @@ async function buildAuthRouter(app) {
       preHandler: validate(verifyOtpSchema),
       schema: {
         tags: ["Auth"],
-        summary: "Verify OTP and issue access and refresh tokens",
+        summary: "Verify email or SMS OTP and issue tokens",
+        description:
+          "Verifies the OTP for the user identified by email or phone. Email OTP is checked locally; SMS OTP is verified with Termii using the stored provider reference.",
         body: verifyOtpBodySchema,
         response: {
           200: authSessionResponseSchema,
@@ -88,7 +92,9 @@ async function buildAuthRouter(app) {
       preHandler: validate(resendOtpSchema),
       schema: {
         tags: ["Auth"],
-        summary: "Resend OTP after cooldown",
+        summary: "Resend signup OTP by the user's selected channel",
+        description:
+          "Resends OTP using the mfaChannel saved on the user account during registration. Email users receive SMTP email OTP; SMS users receive Termii SMS OTP.",
         body: resendOtpBodySchema,
         response: {
           200: messageResponseSchema,
