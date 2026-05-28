@@ -78,6 +78,9 @@ const refreshTokenSchema = z.object({
   refreshToken: z.string().min(10)
 });
 
+const updateAvatarSchema = z.object({
+  avatarUrl: z.string().url()
+});
 module.exports = {
   checkAvailabilitySchema,
   registerSchema,
@@ -88,4 +91,6 @@ module.exports = {
   forgotPasswordSchema,
   resetPasswordSchema,
   refreshTokenSchema
+  ,
+  updateAvatarSchema
 };

@@ -2,12 +2,15 @@ services:
   api:
     image: middlemen-api:latest
     build: .
-    container_name: middlemen-api
     ports:
       - "3000:3000"
+    environment:
+      - NODE_ENV=development
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - .env
     volumes:
@@ -17,7 +20,6 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: middlemen-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: property_app
@@ -27,10 +29,15 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d property_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
-    container_name: middlemen-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -39,4 +46,6 @@ services:
 
 volumes:
   postgres_data:
+    external: true
+    name: 05679c15b710839e1f3336d980cdf2f5505a792e5664b4dac812016e06b0a768_postgres_data
   redis_data:

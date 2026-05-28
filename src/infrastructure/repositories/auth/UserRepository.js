@@ -35,6 +35,23 @@ class UserRepository {
     return this.mapWithSensitive(row);
   }
 
+  async createFromPendingRegistration(pendingRegistration, trx = this.db) {
+    const [row] = await trx("users")
+      .insert({
+        full_name: pendingRegistration.fullName,
+        email: pendingRegistration.email || null,
+        phone: pendingRegistration.phone,
+        role: pendingRegistration.role,
+        password_hash: pendingRegistration.passwordHash,
+        mfa_channel: pendingRegistration.mfaChannel,
+        is_verified: true,
+        last_auth_provider: "password"
+      })
+      .returning("*");
+
+    return this.mapWithSensitive(row);
+  }
+
   async createGoogleUser({ fullName, email, phone, role, googleId, avatarUrl }) {
     const [row] = await this.db("users")
       .insert({
@@ -120,6 +137,15 @@ class UserRepository {
       .returning("*");
 
     return this.mapWithSensitive(row);
+  }
+
+  async updateAvatar(userId, avatarUrl) {
+    const [row] = await this.db("users")
+      .where({ id: userId })
+      .update({ avatar_url: avatarUrl, updated_at: this.db.fn.now() })
+      .returning("*");
+
+    return row ? this.mapWithSensitive(row) : null;
   }
 
   mapWithSensitive(row) {

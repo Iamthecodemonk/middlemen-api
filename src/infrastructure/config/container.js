@@ -6,6 +6,9 @@ const { NegotiationReadRepository } = require("../repositories/NegotiationReadRe
 const { DashboardRepository } = require("../repositories/DashboardRepository");
 const { CacheService } = require("../services/CacheService");
 const { UserRepository } = require("../repositories/auth/UserRepository");
+const {
+  PendingRegistrationRepository
+} = require("../repositories/auth/PendingRegistrationRepository");
 const { RefreshTokenRepository } = require("../repositories/auth/RefreshTokenRepository");
 const { PasswordResetTokenRepository } = require("../repositories/auth/PasswordResetTokenRepository");
 const { CreatePropertyListingUseCase } = require("../../application/use-cases/CreatePropertyListingUseCase");
@@ -21,6 +24,7 @@ const { RefreshSessionUseCase } = require("../../application/use-cases/auth/Refr
 const { ForgotPasswordUseCase } = require("../../application/use-cases/auth/ForgotPasswordUseCase");
 const { ResetPasswordUseCase } = require("../../application/use-cases/auth/ResetPasswordUseCase");
 const { GoogleAuthUseCase } = require("../../application/use-cases/auth/GoogleAuthUseCase");
+const { UpdateAvatarUseCase } = require("../../application/use-cases/auth/UpdateAvatarUseCase");
 const { NegotiationService } = require("../../domain/services/NegotiationService");
 const { PasswordHasher } = require("../services/auth/PasswordHasher");
 const { JwtService } = require("../services/auth/JwtService");
@@ -31,6 +35,7 @@ const { AuthDeliveryService } = require("../services/auth/AuthDeliveryService");
 const { GoogleAuthService } = require("../services/auth/GoogleAuthService");
 const { SmtpEmailService } = require("../services/notifications/SmtpEmailService");
 const { TermiiSmsService } = require("../services/notifications/TermiiSmsService");
+const ImageQueue = require("../queue/imageQueue").createImageQueue();
 const { env } = require("./env");
 
 async function createContainer() {
@@ -44,6 +49,7 @@ async function createContainer() {
   const negotiationReadRepository = new NegotiationReadRepository(db);
   const dashboardRepository = new DashboardRepository(db);
   const userRepository = new UserRepository(db);
+  const pendingRegistrationRepository = new PendingRegistrationRepository(db);
   const refreshTokenRepository = new RefreshTokenRepository(db);
   const passwordResetTokenRepository = new PasswordResetTokenRepository(db);
   const negotiationService = new NegotiationService();
@@ -80,7 +86,9 @@ async function createContainer() {
     user: env.smtpUser,
     pass: env.smtpPass,
     fromName: env.smtpFromName,
-    fromAddress: env.smtpFromAddress
+    fromAddress: env.smtpFromAddress,
+    connectionTimeoutMs: env.smtpConnectionTimeoutMs,
+    greetingTimeoutMs: env.smtpGreetingTimeoutMs
   });
   const smsService = new TermiiSmsService({
     apiKey: env.termiiApiKey,
@@ -98,6 +106,9 @@ async function createContainer() {
     db,
     redis,
     jwtService,
+    queues: {
+      imageQueue: ImageQueue
+    },
     repositories: {
       userRepository
     },
@@ -117,18 +128,23 @@ async function createContainer() {
         checkAvailability: new CheckAvailabilityUseCase({ userRepository }),
         register: new RegisterUserUseCase({
           userRepository,
+          pendingRegistrationRepository,
           passwordHasher,
           otpService,
-          authDeliveryService
+          authDeliveryService,
+          otpTtlSeconds: env.otpTtlSeconds
         }),
         verifyOtp: new VerifyOtpUseCase({
+          db,
           userRepository,
+          pendingRegistrationRepository,
           otpService,
           jwtService,
           refreshTokenRepository
         }),
         resendOtp: new ResendOtpUseCase({
           userRepository,
+          pendingRegistrationRepository,
           otpService,
           authDeliveryService
         }),
@@ -161,6 +177,8 @@ async function createContainer() {
           passwordHasher,
           refreshTokenRepository
         })
+        ,
+        updateAvatar: new UpdateAvatarUseCase({ userRepository })
       }
     }
   };

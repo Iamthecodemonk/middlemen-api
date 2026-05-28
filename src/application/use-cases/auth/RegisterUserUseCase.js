@@ -1,11 +1,20 @@
 const { AppError } = require("../../../shared/errors/AppError");
 
 class RegisterUserUseCase {
-  constructor({ userRepository, passwordHasher, otpService, authDeliveryService }) {
+  constructor({
+    userRepository,
+    pendingRegistrationRepository,
+    passwordHasher,
+    otpService,
+    authDeliveryService,
+    otpTtlSeconds
+  }) {
     this.userRepository = userRepository;
+    this.pendingRegistrationRepository = pendingRegistrationRepository;
     this.passwordHasher = passwordHasher;
     this.otpService = otpService;
     this.authDeliveryService = authDeliveryService;
+    this.otpTtlSeconds = otpTtlSeconds;
   }
 
   async execute(input) {
@@ -23,36 +32,42 @@ class RegisterUserUseCase {
     }
 
     const passwordHash = await this.passwordHasher.hash(input.password);
-    const user = await this.userRepository.create({
+    const pendingRegistration = await this.pendingRegistrationRepository.upsert({
       fullName: input.fullName,
       email: input.email,
       phone: input.phone,
       role: input.role,
       passwordHash,
-      mfaChannel: input.mfaChannel
+      mfaChannel: input.mfaChannel,
+      expiresAt: new Date(Date.now() + this.otpTtlSeconds * 1000)
     });
 
-    const destination = user.mfaChannel === "sms" ? user.phone : user.email;
-    const otp = await this.otpService.issue(user.id, user.mfaChannel, { destination });
+    const destination =
+      pendingRegistration.mfaChannel === "sms"
+        ? pendingRegistration.phone
+        : pendingRegistration.email;
+    const otp = await this.otpService.issue(pendingRegistration.id, pendingRegistration.mfaChannel, {
+      destination
+    });
     if (!otp.deliveredByProvider) {
       await this.authDeliveryService.sendOtp({
-        channel: user.mfaChannel,
+        channel: pendingRegistration.mfaChannel,
         destination,
         code: otp.code
       });
     }
 
     return {
-      user: sanitizeUser(user),
+      pendingRegistration: sanitizePendingRegistration(pendingRegistration),
       verificationRequired: true,
       message: "Registration created. Verify OTP to activate the account."
     };
   }
 }
 
-function sanitizeUser(user) {
-  const { passwordHash, googleId, ...safeUser } = user;
-  return safeUser;
+function sanitizePendingRegistration(pendingRegistration) {
+  const { passwordHash, ...safePendingRegistration } = pendingRegistration;
+  return safePendingRegistration;
 }
 
 module.exports = { RegisterUserUseCase };

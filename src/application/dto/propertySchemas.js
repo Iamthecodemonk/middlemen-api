@@ -1,7 +1,7 @@
 const { z } = require("zod");
 
 const createPropertySchema = z.object({
-  ownerId: z.uuid().optional(),
+  ownerId: z.string().uuid().optional(),
   title: z.string().min(5),
   description: z.string().optional().default(""),
   propertyType: z.enum(["rent", "sale", "fractional"]).default("rent"),

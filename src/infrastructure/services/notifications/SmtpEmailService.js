@@ -9,7 +9,9 @@ class SmtpEmailService {
     user,
     pass,
     fromName,
-    fromAddress
+    fromAddress,
+    connectionTimeoutMs,
+    greetingTimeoutMs
   }) {
     this.host = host;
     this.port = port;
@@ -18,6 +20,8 @@ class SmtpEmailService {
     this.pass = pass;
     this.fromName = fromName;
     this.fromAddress = fromAddress;
+    this.connectionTimeoutMs = connectionTimeoutMs;
+    this.greetingTimeoutMs = greetingTimeoutMs;
     this.transporter = null;
   }
 
@@ -28,14 +32,27 @@ class SmtpEmailService {
   async sendMail({ to, subject, text, html }) {
     this.assertConfigured();
 
-    const transporter = this.getTransporter();
-    await transporter.sendMail({
-      from: this.formatFrom(),
-      to,
-      subject,
-      text,
-      html
-    });
+    try {
+      const transporter = this.getTransporter();
+      await transporter.sendMail({
+        from: this.formatFrom(),
+        to,
+        subject,
+        text,
+        html
+      });
+    } catch (error) {
+      throw new AppError("Email delivery failed", 502, {
+        cause: error,
+        details: {
+          smtpHost: this.host,
+          smtpPort: this.port,
+          smtpSecure: this.secure,
+          smtpUserConfigured: Boolean(this.user),
+          smtpFromAddressConfigured: Boolean(this.fromAddress)
+        }
+      });
+    }
   }
 
   getTransporter() {
@@ -47,7 +64,9 @@ class SmtpEmailService {
         auth: {
           user: this.user,
           pass: this.pass
-        }
+        },
+        connectionTimeout: this.connectionTimeoutMs,
+        greetingTimeout: this.greetingTimeoutMs
       });
     }
 

@@ -2,6 +2,7 @@ const { PropertyController } = require("../controllers/PropertyController");
 const { ClaimController } = require("../controllers/ClaimController");
 const { NegotiationController } = require("../controllers/NegotiationController");
 const { DashboardController } = require("../controllers/DashboardController");
+const { UserController } = require("../controllers/UserController");
 const { validate } = require("../middleware/validate");
 const { authenticate } = require("../middleware/auth/authenticate");
 const { authorizeRoles } = require("../middleware/auth/authorizeRoles");
@@ -17,12 +18,18 @@ const {
   dashboardParamsSchema,
   dashboardResponseSchema,
   errorResponseSchema,
+  imageUploadQueuedResponseSchema,
+  imageUploadStatusResponseSchema,
   negotiationBodySchema,
   negotiationResponseSchema,
   propertyBodySchema,
   propertyListResponseSchema,
-  propertySchema
+  propertySchema,
+  updateAvatarBodySchema,
+  userSchema
 } = require("../../docs/openApiSchemas");
+const { updateAvatarSchema } = require("../../../application/dto/auth/authSchemas");
+const { UploadController } = require("../controllers/UploadController");
 
 function registerRoutes(app) {
   app.get(
@@ -146,6 +153,66 @@ function registerRoutes(app) {
       }
     },
     DashboardController.summary
+  );
+
+  app.put(
+    "/api/users/avatar",
+    {
+      preHandler: [authenticate, validate(updateAvatarSchema)],
+      schema: {
+        tags: ["Users"],
+        summary: "Update authenticated user's avatar URL",
+        security: [{ bearerAuth: [] }],
+        body: updateAvatarBodySchema,
+        response: {
+          200: userSchema,
+          401: errorResponseSchema,
+          422: errorResponseSchema
+        }
+      }
+    },
+    UserController.updateAvatar
+  );
+
+  app.post(
+    "/api/uploads/images",
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ["Uploads"],
+        summary: "Upload an image for the authenticated user",
+        security: [{ bearerAuth: [] }],
+        response: {
+          202: imageUploadQueuedResponseSchema,
+          401: errorResponseSchema,
+          422: errorResponseSchema
+        }
+      }
+    },
+    UploadController.enqueueImage
+  );
+
+  app.get(
+    "/api/uploads/images/:jobId",
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ["Uploads"],
+        summary: "Get image upload job status",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: { jobId: { type: "string" } },
+          required: ["jobId"]
+        },
+        response: {
+          200: imageUploadStatusResponseSchema,
+          401: errorResponseSchema,
+          404: errorResponseSchema
+        }
+      }
+    },
+    UploadController.getJobStatus
   );
 }
 
