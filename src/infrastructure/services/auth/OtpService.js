@@ -2,10 +2,11 @@ const { randomInt } = require("crypto");
 const { AppError } = require("../../../shared/errors/AppError");
 
 class OtpService {
-  constructor(redis, { ttlSeconds, resendCooldownSeconds }) {
+  constructor(redis, { ttlSeconds, resendCooldownSeconds, termiiOtpService }) {
     this.redis = redis;
     this.ttlSeconds = ttlSeconds;
     this.resendCooldownSeconds = resendCooldownSeconds;
+    this.termiiOtpService = termiiOtpService;
   }
 
   buildOtpKey(userId) {
@@ -16,7 +17,11 @@ class OtpService {
     return `auth:otp:meta:${userId}`;
   }
 
-  async issue(userId, channel) {
+  async issue(userId, channel, { destination } = {}) {
+    if (channel === "sms") {
+      return this.issueSmsOtp(userId, destination);
+    }
+
     const otp = String(randomInt(100000, 1000000));
     const otpKey = this.buildOtpKey(userId);
     const metaKey = this.buildMetaKey(userId);
@@ -39,7 +44,44 @@ class OtpService {
       { EX: this.ttlSeconds }
     );
 
-    return otp;
+    return {
+      code: otp,
+      deliveredByProvider: false
+    };
+  }
+
+  async issueSmsOtp(userId, destination) {
+    if (!destination) {
+      throw new AppError("SMS destination is required", 422);
+    }
+
+    const { pinId } = await this.termiiOtpService.sendSmsOtp({ to: destination });
+    const otpKey = this.buildOtpKey(userId);
+    const metaKey = this.buildMetaKey(userId);
+
+    await this.redis.set(
+      otpKey,
+      JSON.stringify({
+        channel: "sms",
+        provider: "termii",
+        pinId
+      }),
+      { EX: this.ttlSeconds }
+    );
+
+    await this.redis.set(
+      metaKey,
+      JSON.stringify({
+        lastSentAt: Date.now(),
+        channel: "sms"
+      }),
+      { EX: this.ttlSeconds }
+    );
+
+    return {
+      deliveredByProvider: true,
+      provider: "termii"
+    };
   }
 
   async assertCanResend(userId) {
@@ -62,7 +104,12 @@ class OtpService {
     }
 
     const payload = JSON.parse(raw);
-    if (payload.code !== code) {
+    if (payload.provider === "termii") {
+      await this.termiiOtpService.verifySmsOtp({
+        pinId: payload.pinId,
+        pin: code
+      });
+    } else if (payload.code !== code) {
       throw new AppError("OTP is invalid or expired", 400);
     }
 

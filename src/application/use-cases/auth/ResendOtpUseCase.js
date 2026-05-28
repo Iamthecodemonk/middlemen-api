@@ -14,13 +14,16 @@ class ResendOtpUseCase {
     }
 
     await this.otpService.assertCanResend(user.id);
-    const code = await this.otpService.issue(user.id, user.mfaChannel);
+    const destination = user.mfaChannel === "sms" ? user.phone : user.email;
+    const otp = await this.otpService.issue(user.id, user.mfaChannel, { destination });
 
-    await this.authDeliveryService.sendOtp({
-      channel: user.mfaChannel,
-      destination: user.mfaChannel === "sms" ? user.phone : user.email,
-      code
-    });
+    if (!otp.deliveredByProvider) {
+      await this.authDeliveryService.sendOtp({
+        channel: user.mfaChannel,
+        destination,
+        code: otp.code
+      });
+    }
 
     return { message: "OTP resent successfully" };
   }

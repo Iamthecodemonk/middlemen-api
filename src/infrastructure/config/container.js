@@ -25,9 +25,12 @@ const { NegotiationService } = require("../../domain/services/NegotiationService
 const { PasswordHasher } = require("../services/auth/PasswordHasher");
 const { JwtService } = require("../services/auth/JwtService");
 const { OtpService } = require("../services/auth/OtpService");
+const { TermiiOtpService } = require("../services/auth/TermiiOtpService");
 const { AuthRateLimiter } = require("../services/auth/AuthRateLimiter");
 const { AuthDeliveryService } = require("../services/auth/AuthDeliveryService");
 const { GoogleAuthService } = require("../services/auth/GoogleAuthService");
+const { SmtpEmailService } = require("../services/notifications/SmtpEmailService");
+const { TermiiSmsService } = require("../services/notifications/TermiiSmsService");
 const { env } = require("./env");
 
 async function createContainer() {
@@ -52,15 +55,43 @@ async function createContainer() {
     accessExpiresIn: env.jwtAccessExpiresIn,
     refreshExpiresIn: env.jwtRefreshExpiresIn
   });
+  const termiiOtpService = new TermiiOtpService({
+    apiKey: env.termiiApiKey,
+    baseUrl: env.termiiBaseUrl,
+    senderId: env.termiiSenderId,
+    channel: env.termiiChannel,
+    pinAttempts: env.termiiPinAttempts,
+    pinLength: env.termiiPinLength,
+    ttlSeconds: env.otpTtlSeconds
+  });
   const otpService = new OtpService(redis, {
     ttlSeconds: env.otpTtlSeconds,
-    resendCooldownSeconds: env.otpResendCooldownSeconds
+    resendCooldownSeconds: env.otpResendCooldownSeconds,
+    termiiOtpService
   });
   const authRateLimiter = new AuthRateLimiter(redis, {
     maxAttempts: env.loginRateLimitMax,
     windowSeconds: env.loginRateLimitWindowSeconds
   });
-  const authDeliveryService = new AuthDeliveryService();
+  const emailService = new SmtpEmailService({
+    host: env.smtpHost,
+    port: env.smtpPort,
+    secure: env.smtpSecure,
+    user: env.smtpUser,
+    pass: env.smtpPass,
+    fromName: env.smtpFromName,
+    fromAddress: env.smtpFromAddress
+  });
+  const smsService = new TermiiSmsService({
+    apiKey: env.termiiApiKey,
+    baseUrl: env.termiiBaseUrl,
+    senderId: env.termiiSenderId,
+    channel: env.termiiChannel
+  });
+  const authDeliveryService = new AuthDeliveryService({
+    emailService,
+    smsService
+  });
   const googleAuthService = new GoogleAuthService({ clientId: env.googleClientId });
 
   return {

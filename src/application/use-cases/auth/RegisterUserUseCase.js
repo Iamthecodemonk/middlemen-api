@@ -32,12 +32,15 @@ class RegisterUserUseCase {
       mfaChannel: input.mfaChannel
     });
 
-    const code = await this.otpService.issue(user.id, user.mfaChannel);
-    await this.authDeliveryService.sendOtp({
-      channel: user.mfaChannel,
-      destination: user.mfaChannel === "sms" ? user.phone : user.email,
-      code
-    });
+    const destination = user.mfaChannel === "sms" ? user.phone : user.email;
+    const otp = await this.otpService.issue(user.id, user.mfaChannel, { destination });
+    if (!otp.deliveredByProvider) {
+      await this.authDeliveryService.sendOtp({
+        channel: user.mfaChannel,
+        destination,
+        code: otp.code
+      });
+    }
 
     return {
       user: sanitizeUser(user),
