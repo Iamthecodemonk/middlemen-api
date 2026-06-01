@@ -110,6 +110,19 @@ class UserRepository {
     return this.mapWithSensitive(row);
   }
 
+  async markIdentityVerified(userId) {
+    const [row] = await this.db("users")
+      .where({ id: userId })
+      .update({
+        is_bvn_verified: true,
+        is_verified: true,
+        updated_at: this.db.fn.now()
+      })
+      .returning("*");
+
+    return this.mapWithSensitive(row);
+  }
+
   async updateLastLogin(userId) {
     await this.db("users").where({ id: userId }).update({
       last_login_at: this.db.fn.now(),
@@ -156,6 +169,7 @@ class UserRepository {
       phone: row.phone,
       role: row.role,
       userTier: row.user_tier,
+      isBvnVerified: row.is_bvn_verified,
       isVerified: row.is_verified,
       mfaChannel: row.mfa_channel,
       googleId: row.google_id,

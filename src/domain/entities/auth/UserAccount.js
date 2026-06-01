@@ -6,6 +6,7 @@ class UserAccount {
     phone,
     role,
     userTier,
+    isBvnVerified,
     isVerified,
     mfaChannel,
     googleId,
@@ -20,6 +21,7 @@ class UserAccount {
     this.phone = phone;
     this.role = role;
     this.userTier = userTier;
+    this.isBvnVerified = isBvnVerified;
     this.isVerified = isVerified;
     this.mfaChannel = mfaChannel;
     this.googleId = googleId;

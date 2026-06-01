@@ -4,6 +4,9 @@ const { PropertyRepository } = require("../repositories/PropertyRepository");
 const { ClaimRepository } = require("../repositories/ClaimRepository");
 const { NegotiationReadRepository } = require("../repositories/NegotiationReadRepository");
 const { DashboardRepository } = require("../repositories/DashboardRepository");
+const {
+  UserVerificationRepository
+} = require("../repositories/UserVerificationRepository");
 const { CacheService } = require("../services/CacheService");
 const { UserRepository } = require("../repositories/auth/UserRepository");
 const {
@@ -15,6 +18,9 @@ const { CreatePropertyListingUseCase } = require("../../application/use-cases/Cr
 const { ClaimPropertyUseCase } = require("../../application/use-cases/ClaimPropertyUseCase");
 const { RecommendNegotiationUseCase } = require("../../application/use-cases/RecommendNegotiationUseCase");
 const { GetLifecycleDashboardUseCase } = require("../../application/use-cases/GetLifecycleDashboardUseCase");
+const { VerifyNinUseCase } = require("../../application/use-cases/VerifyNinUseCase");
+const { VerifyLivenessUseCase } = require("../../application/use-cases/VerifyLivenessUseCase");
+const { GetKycStatusUseCase } = require("../../application/use-cases/GetKycStatusUseCase");
 const { CheckAvailabilityUseCase } = require("../../application/use-cases/auth/CheckAvailabilityUseCase");
 const { RegisterUserUseCase } = require("../../application/use-cases/auth/RegisterUserUseCase");
 const { VerifyOtpUseCase } = require("../../application/use-cases/auth/VerifyOtpUseCase");
@@ -35,6 +41,7 @@ const { AuthDeliveryService } = require("../services/auth/AuthDeliveryService");
 const { GoogleAuthService } = require("../services/auth/GoogleAuthService");
 const { SmtpEmailService } = require("../services/notifications/SmtpEmailService");
 const { TermiiSmsService } = require("../services/notifications/TermiiSmsService");
+const { DojahKycService } = require("../services/kyc/DojahKycService");
 const ImageQueue = require("../queue/imageQueue").createImageQueue();
 const { env } = require("./env");
 
@@ -49,6 +56,7 @@ async function createContainer() {
   const negotiationReadRepository = new NegotiationReadRepository(db);
   const dashboardRepository = new DashboardRepository(db);
   const userRepository = new UserRepository(db);
+  const userVerificationRepository = new UserVerificationRepository(db);
   const pendingRegistrationRepository = new PendingRegistrationRepository(db);
   const refreshTokenRepository = new RefreshTokenRepository(db);
   const passwordResetTokenRepository = new PasswordResetTokenRepository(db);
@@ -101,11 +109,19 @@ async function createContainer() {
     smsService
   });
   const googleAuthService = new GoogleAuthService({ clientId: env.googleClientId });
+  const dojahKycService = new DojahKycService({
+    baseUrl: env.dojahBaseUrl,
+    appId: env.dojahAppId,
+    secretKey: env.dojahSecretKey
+  });
 
   return {
     db,
     redis,
     jwtService,
+    config: {
+      kycLivenessMaxAttempts: env.kycLivenessMaxAttempts
+    },
     queues: {
       imageQueue: ImageQueue
     },
@@ -123,6 +139,21 @@ async function createContainer() {
       getLifecycleDashboard: new GetLifecycleDashboardUseCase({
         dashboardRepository,
         cacheService
+      }),
+      verifyNin: new VerifyNinUseCase({
+        userRepository,
+        userVerificationRepository,
+        dojahKycService
+      }),
+      verifyLiveness: new VerifyLivenessUseCase({
+        userRepository,
+        userVerificationRepository,
+        dojahKycService,
+        maxAttempts: env.kycLivenessMaxAttempts,
+        threshold: env.kycLivenessThreshold
+      }),
+      getKycStatus: new GetKycStatusUseCase({
+        userVerificationRepository
       }),
       auth: {
         checkAvailability: new CheckAvailabilityUseCase({ userRepository }),

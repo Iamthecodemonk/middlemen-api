@@ -51,7 +51,12 @@ const env = {
   imageUploadBackoffMs: Number(process.env.IMAGE_UPLOAD_BACKOFF_MS || 5000),
   imageUploadRemoveOnComplete: Number(process.env.IMAGE_UPLOAD_REMOVE_ON_COMPLETE || 100),
   imageUploadRemoveOnFail: Number(process.env.IMAGE_UPLOAD_REMOVE_ON_FAIL || 500),
-  imageUploadWorkerConcurrency: Number(process.env.IMAGE_UPLOAD_WORKER_CONCURRENCY || 2)
+  imageUploadWorkerConcurrency: Number(process.env.IMAGE_UPLOAD_WORKER_CONCURRENCY || 2),
+  dojahBaseUrl: process.env.DOJAH_BASE_URL || "https://api.dojah.io",
+  dojahAppId: process.env.DOJAH_APP_ID || "",
+  dojahSecretKey: process.env.DOJAH_SECRET_KEY || "",
+  kycLivenessMaxAttempts: Number(process.env.KYC_LIVENESS_MAX_ATTEMPTS || 3),
+  kycLivenessThreshold: Number(process.env.KYC_LIVENESS_THRESHOLD || 50)
 };
 
 module.exports = { env };

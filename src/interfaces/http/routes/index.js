@@ -3,6 +3,7 @@ const { ClaimController } = require("../controllers/ClaimController");
 const { NegotiationController } = require("../controllers/NegotiationController");
 const { DashboardController } = require("../controllers/DashboardController");
 const { UserController } = require("../controllers/UserController");
+const { KycController } = require("../controllers/KycController");
 const { validate } = require("../middleware/validate");
 const { authenticate } = require("../middleware/auth/authenticate");
 const { authorizeRoles } = require("../middleware/auth/authorizeRoles");
@@ -12,6 +13,7 @@ const { claimPropertySchema } = require("../../../application/dto/claimSchemas")
 const {
   recommendNegotiationSchema
 } = require("../../../application/dto/negotiationSchemas");
+const { verifyLivenessSchema, verifyNinSchema } = require("../../../application/dto/kycSchemas");
 const {
   claimBodySchema,
   claimResponseSchema,
@@ -20,6 +22,11 @@ const {
   errorResponseSchema,
   imageUploadQueuedResponseSchema,
   imageUploadStatusResponseSchema,
+  ninVerificationBodySchema,
+  kycStatusResponseSchema,
+  livenessVerificationBodySchema,
+  livenessVerificationResponseSchema,
+  ninVerificationResponseSchema,
   negotiationBodySchema,
   negotiationResponseSchema,
   propertyBodySchema,
@@ -172,6 +179,105 @@ function registerRoutes(app) {
       }
     },
     UserController.updateAvatar
+  );
+
+  app.post(
+    "/api/kyc/nin",
+    {
+      preHandler: [
+        authenticate,
+        authorizeRoles("property_owner", "agent", "owner", "admin"),
+        validate(verifyNinSchema)
+      ],
+      schema: {
+        tags: ["KYC"],
+        summary: "Verify landlord NIN with Dojah",
+        description:
+          "Looks up a Nigerian NIN through Dojah/NIMC-backed verification. When valid, the authenticated landlord account is marked identity verified.",
+        security: [{ bearerAuth: [] }],
+        body: ninVerificationBodySchema,
+        response: {
+          200: ninVerificationResponseSchema,
+          400: errorResponseSchema,
+          401: errorResponseSchema,
+          403: errorResponseSchema,
+          422: errorResponseSchema,
+          503: errorResponseSchema
+        }
+      }
+    },
+    KycController.verifyNin
+  );
+
+  app.post(
+    "/api/kyc/liveness",
+    {
+      preHandler: [
+        authenticate,
+        authorizeRoles("property_owner", "agent", "owner", "admin"),
+        validate(verifyLivenessSchema)
+      ],
+      schema: {
+        tags: ["KYC"],
+        summary: "Verify landlord selfie liveness with Dojah",
+        description:
+          "Submits a base64 live selfie to Dojah liveness verification. The account becomes fully KYC verified only after both NIN and liveness pass.",
+        security: [{ bearerAuth: [] }],
+        body: livenessVerificationBodySchema,
+        response: {
+          200: livenessVerificationResponseSchema,
+          400: errorResponseSchema,
+          401: errorResponseSchema,
+          403: errorResponseSchema,
+          422: errorResponseSchema,
+          429: errorResponseSchema,
+          503: errorResponseSchema
+        }
+      }
+    },
+    KycController.verifyLiveness
+  );
+
+  app.post(
+    "/api/kyc/liveness/retry",
+    {
+      preHandler: [
+        authenticate,
+        authorizeRoles("property_owner", "agent", "owner", "admin"),
+        validate(verifyLivenessSchema)
+      ],
+      schema: {
+        tags: ["KYC"],
+        summary: "Retry failed landlord liveness check",
+        security: [{ bearerAuth: [] }],
+        body: livenessVerificationBodySchema,
+        response: {
+          200: livenessVerificationResponseSchema,
+          401: errorResponseSchema,
+          403: errorResponseSchema,
+          422: errorResponseSchema,
+          429: errorResponseSchema
+        }
+      }
+    },
+    KycController.retryLiveness
+  );
+
+  app.get(
+    "/api/kyc/status",
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ["KYC"],
+        summary: "Get authenticated user's KYC status",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: kycStatusResponseSchema,
+          401: errorResponseSchema
+        }
+      }
+    },
+    KycController.status
   );
 
   app.post(
